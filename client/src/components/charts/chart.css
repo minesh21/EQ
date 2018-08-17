@@ -1,0 +1,12 @@
+.ui.label {
+    border-radius:0 !important;
+}
+
+.ui.input>input {
+    border-radius: 0 !important;
+}
+
+#geomap {
+    width:100%;
+    height:470px;
+}
