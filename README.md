@@ -31,7 +31,7 @@ npm run dev
 ```
 
 ## Credits
--EQ works
--Google Charts
+- EQ works
+- Google Charts
 
 
