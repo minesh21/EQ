@@ -1,9 +1,18 @@
 const express = require('express');
 const pg = require('pg');
 const session = require('express-session');
+const RedisStore = require('connect-redis')(session);
 require('dotenv').config();
-
 const app = express()
+const MAX_CALLS = 20;
+app.use(session({
+  secret: 'ABCeasyASonetwothree',
+  store: new RedisStore({url: process.env.REDISURL}),
+  saveUninitialized: false,
+  resave: false,
+  cookie: {maxAge: new Date(Date.now() + (24 * 60 * 60 * 1000))},
+}))
+
 // configs come from standard PostgreSQL env vars
 // https://www.postgresql.org/docs/9.6/static/libpq-envars.html
 
@@ -16,9 +25,26 @@ const pool = new pg.Pool({
 });
 
 const queryHandler = (req, res, next) => {
+  if (!req.session.ip) {
+    req.session.ip = req.connection.remoteAddress;
+    req.session.calls = 1;
+  } else {
+    req.session.calls += 1;
+  }
+  console.log(req.session);
   pool.query(req.sqlQuery).then((r) => {
     return res.json(r.rows || [])
   }).catch(next)
+}
+
+const limit = (req, res, next) => {
+  if (req.session.ip && req.session.ip === req.connection.remoteAddress) {
+    if (req.session.calls >= MAX_CALLS) {
+      return res.status(400).json({status: 'limit', error: req.session.cookie.expires});
+    } 
+    return next();
+  }
+  return next();
 }
 
 app.use((req, res, next) => {
@@ -33,17 +59,18 @@ app.get('/', (req, res) => {
   res.send('Welcome to EQ Works 😎')
 })
 
-app.get('/events/hourly', (req, res, next) => {
+app.get('/events/hourly', limit, (req, res, next) => {
+  console.log('here');
   req.sqlQuery = `
     SELECT date, hour, events
     FROM public.hourly_events
     ORDER BY date, hour
     LIMIT 168;
   `
-  return next()
+  return next();
 }, queryHandler)
 
-app.get('/events/hourly/list?*', (req, res, next) => {
+app.get('/events/hourly/list?*', limit, (req, res, next) => {
   req.sqlQuery = `
     SELECT SUM(${req.query.metric}) AS ${req.query.metric}, hourly.poi_id, poi.lat, poi.lon
     FROM public.hourly_events AS hourly
@@ -56,7 +83,7 @@ app.get('/events/hourly/list?*', (req, res, next) => {
   return next();
 }, queryHandler)
 
-app.get('/stats/hourly/list?*', (req, res, next) => {
+app.get('/stats/hourly/list?*', limit, (req, res, next) => {
   req.sqlQuery = `
       SELECT SUM(${req.query.metric}) AS ${req.query.metric}, hourly.poi_id, poi.lat, poi.lon
       FROM public.hourly_stats AS hourly
@@ -69,7 +96,7 @@ app.get('/stats/hourly/list?*', (req, res, next) => {
   return next();
 }, queryHandler)
 
-app.get('/events/daily', (req, res, next) => {
+app.get('/events/daily', limit, (req, res, next) => {
   req.sqlQuery = `
     SELECT date, SUM(events) AS events
     FROM public.hourly_events
@@ -80,7 +107,7 @@ app.get('/events/daily', (req, res, next) => {
   return next()
 }, queryHandler)
 
-app.get('/stats/hourly', (req, res, next) => {
+app.get('/stats/hourly', limit, (req, res, next) => {
   req.sqlQuery = `
     SELECT date, hour, impressions, clicks, revenue, poi_id
     FROM public.hourly_stats
@@ -90,7 +117,7 @@ app.get('/stats/hourly', (req, res, next) => {
   return next()
 }, queryHandler)
 
-app.get('/stats/daily', (req, res, next) => {
+app.get('/stats/daily', limit, (req, res, next) => {
   req.sqlQuery = `
     SELECT date,
         SUM(impressions) AS impressions,
@@ -104,7 +131,7 @@ app.get('/stats/daily', (req, res, next) => {
   return next()
 }, queryHandler)
 
-app.get('/poi', (req, res, next) => {
+app.get('/poi', limit, (req, res, next) => {
   req.sqlQuery = `
     SELECT *
     FROM public.poi;
