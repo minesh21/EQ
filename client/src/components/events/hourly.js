@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import SearchComponent from '../table/search';
 import TableComponent from '../table/table';
 
 class EventsHourlyComponent extends Component {
@@ -29,7 +28,6 @@ class EventsHourlyComponent extends Component {
             <div>
                 {this.state.rows && this.state.rows.length > 0 ? 
                     <div>
-                        <SearchComponent data={this.state.rows} onSearch={this.handleOnSearch} />
                         <TableComponent headings={this.state.headers} table={this.state.rows}/>
                     </div> : 'No Data Found!'}
             </div>

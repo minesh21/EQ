@@ -1,7 +1,6 @@
 import React, { Component } from 'react';
 import { Container, Grid } from 'semantic-ui-react';
 import EventsHourlyComponent from '../../components/events/hourly';
-import EventsDailyComponent from '../../components/events/daily';
 import { get_hourly_events } from '../../actions/events/events';
 import GeoChart from '../../components/charts/geo';
 import { connect } from 'react-redux';
@@ -18,18 +17,22 @@ class HomePage extends Component {
         this.props.hourlyRequest();
     }
 
-    componentWillReceiveProps(next) {
-        if (this.state.hourly !== next.hourly) {
-            this.setState({hourly: next.hourly});
+    static getDerivedStateFromProps(props, state) {
+        if (state.hourly !== props.hourly) {
+            return {
+                hourly: props.hourly,
+            }
         }
-    }
+    } 
 
     render() {
         return (
             <div>
                 <GeoChart />
+                <Container>
+                    
                     <Grid  style={{marginTop: '25px'}}>
-                        <Grid.Row columns="1">
+                        <Grid.Row columns="2">
                             <Grid.Column>
                                 <EventsHourlyComponent data={this.state.hourly}/>
                             </Grid.Column>
@@ -41,6 +44,8 @@ class HomePage extends Component {
                             </Grid.Column>
                         </Grid.Row>
                     </Grid>
+                </Container>
+                
             </div>
 
         )

@@ -16,7 +16,7 @@ class ColumnChart extends Component {
     componentDidMount() {}
 
     componentWillReceiveProps(next) {
-        if (this.state.data !== next.data) {
+        if (this.state.data !== next.data && next.data.length > 0) {
             this.setState({data: next.data});
             this.setState({title: next.title});
             this.setState({columnId: next.columnId});
@@ -32,7 +32,7 @@ class ColumnChart extends Component {
         })
         google.charts.setOnLoadCallback(() => { 
 
-            // Generate Data Table        
+            // Generate Data Table    
             let dataTable = new google.visualization.DataTable();
             let keys = Object.keys(this.state.data[0]).map(key =>{ 
                     return [typeof(this.state.data[0][key]), key.charAt(0).toUpperCase() + key.substr(1)]
