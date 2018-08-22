@@ -4,7 +4,7 @@ const session = require('express-session');
 const RedisStore = require('connect-redis')(session);
 require('dotenv').config();
 const app = express()
-const MAX_CALLS = 20;
+const MAX_CALLS = 1000;
 app.use(session({
   secret: 'ABCeasyASonetwothree',
   store: new RedisStore({url: process.env.REDISURL}),
@@ -31,7 +31,6 @@ const queryHandler = (req, res, next) => {
   } else {
     req.session.calls += 1;
   }
-  console.log(req.session);
   pool.query(req.sqlQuery).then((r) => {
     return res.json(r.rows || [])
   }).catch(next)
@@ -60,11 +59,21 @@ app.get('/', (req, res) => {
 })
 
 app.get('/events/hourly', limit, (req, res, next) => {
-  console.log('here');
   req.sqlQuery = `
     SELECT date, hour, events
     FROM public.hourly_events
     ORDER BY date, hour
+    LIMIT 168;
+  `
+  return next();
+}, queryHandler)
+
+app.get('/events/hourly/aggregate', limit, (req, res, next) => {
+  req.sqlQuery = `
+    SELECT sum(events) AS events, date
+    FROM public.hourly_events AS hourly
+    GROUP BY date
+    ORDER BY date
     LIMIT 168;
   `
   return next();
